@@ -1,0 +1,97 @@
+version: '3.9'
+services:
+
+  #Nginx Service
+  nginx:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/nginx/Dockerfile
+    volumes:
+      - ../projects/:/projects/
+      - ./nginx-sites/:/etc/nginx/conf.d/sites-available/
+      - ./nginx-sites/:/etc/nginx/conf.d/sites-enabled/
+      - ./conffiles/nginx.conf:/etc/nginx/nginx.conf
+      - ./certs/:/etc/nginx/letsencrypt/
+    container_name: nginx
+    restart: always
+    tty: true
+    depends_on:
+      - php
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+
+  #Redis Service
+  redis:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/redis/Dockerfile
+    container_name: redis
+    tty: true
+    restart: always
+    networks:
+      - app-network
+    ports:
+      - "6379:6379"
+
+  #Redisinsight Service
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight
+    restart: always
+    tty: true
+    ports:
+      - "8001:8001"
+    networks:
+      - app-network
+
+  #PHP Service
+  php:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/php/Dockerfile
+    volumes:
+      - ../projects:/projects/
+      - ./conffiles/php.ini:/usr/local/etc/php/php.ini
+    container_name: php
+    tty: true
+    restart: always
+    networks:
+      - app-network
+    ports:
+      - "9000:9000"
+      - "6001:6001"
+
+  #MySQL Service
+  mysql:
+    image: mysql:8.0.31
+    container_name: mysql
+    restart: always
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    networks:
+      - app-network
+
+  #Phpmyadmin Service
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    tty: true
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      UPLOAD_LIMIT: 300M
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
